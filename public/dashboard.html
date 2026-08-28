@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Mharo AGI Activity</title>
+<style>
+  body{margin:0;background:#28131f;color:#fff3f7;font:14px system-ui,sans-serif;padding:28px}
+  .wrap{max-width:1050px;margin:auto}
+  h1{margin:0 0 6px;font-size:34px}
+  p{color:#cbaeb9}
+  .row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:20px 0}
+  .card{padding:16px;border:1px solid #684051;border-radius:14px;background:#3a1c2b}
+  .label{font-size:10px;letter-spacing:.14em;color:#aa8b99;text-transform:uppercase}
+  .value{margin-top:7px;font-size:25px;font-weight:800}
+  table{width:100%;border-collapse:collapse;background:#321827;border:1px solid #684051;border-radius:14px;overflow:hidden}
+  th,td{text-align:left;padding:10px;border-bottom:1px solid #523344;font-size:12px;vertical-align:top}
+  th{color:#d5b7c3;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+  .muted{color:#a88a97}.pill{padding:3px 7px;border-radius:999px;background:#4c2738;color:#f4cedc;font-size:11px}
+  button{padding:10px 14px;border:0;border-radius:10px;background:#ff9fc3;color:#351522;font-weight:800;cursor:pointer}
+  input{padding:10px 12px;border-radius:10px;border:1px solid #684051;background:#24111b;color:#fff;min-width:240px}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0}
+  @media(max-width:800px){.row{grid-template-columns:1fr 1fr}body{padding:16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Mharo AGI Activity</h1>
+  <p>Shows anonymous page and interaction activity. It does not prove who is reading.</p>
+  <div class="toolbar">
+    <input id="token" type="password" placeholder="Dashboard token">
+    <button id="load">Load activity</button>
+    <span class="muted" id="status"></span>
+  </div>
+  <div class="row">
+    <div class="card"><div class="label">Sessions</div><div class="value" id="sessions">0</div></div>
+    <div class="card"><div class="label">Opens</div><div class="value" id="opens">0</div></div>
+    <div class="card"><div class="label">Touch Me</div><div class="value" id="touches">0</div></div>
+    <div class="card"><div class="label">Last seen</div><div class="value" id="lastSeen">—</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Time</th><th>Event</th><th>Session</th><th>Progress</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="4" class="muted">No data loaded.</td></tr></tbody>
+  </table>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+$('load').onclick = async () => {
+  const token = $('token').value.trim();
+  $('status').textContent = 'Loading...';
+  try {
+    const r = await fetch('/api/activity', { headers:{'x-dashboard-token':token} });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Request failed');
+    const rows = data.rows || [];
+    const sessions = new Set(rows.map(r => r.session_id));
+    $('sessions').textContent = sessions.size;
+    $('opens').textContent = rows.filter(r => r.event === 'app_opened').length;
+    $('touches').textContent = rows.filter(r => r.event === 'touch_me').length;
+    $('lastSeen').textContent = rows[0] ? new Date(rows[0].created_at).toLocaleString() : '—';
+    $('rows').innerHTML = rows.slice(0,200).map(r => {
+      const meta = r.meta || {};
+      const progress = meta.progress != null ? `${meta.progress}%` : (meta.word_count != null ? `${meta.word_count} words` : '');
+      return `<tr><td>${new Date(r.created_at).toLocaleString()}</td><td><span class="pill">${r.event}</span></td><td>${String(r.session_id).slice(0,10)}…</td><td>${progress}</td></tr>`;
+    }).join('') || '<tr><td colspan="4" class="muted">No activity yet.</td></tr>';
+    $('status').textContent = `Loaded ${rows.length} events`;
+  } catch (e) {
+    $('status').textContent = e.message;
+  }
+};
+</script>
+</body>
+</html>
