@@ -1,0 +1,9 @@
+{
+  "name": "mharo-agi",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Mharo AGI with quiet music and anonymous activity tracking",
+  "dependencies": {
+    "@netlify/blobs": "^10.0.0"
+  }
+}
